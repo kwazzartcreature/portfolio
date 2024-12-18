@@ -1,0 +1,61 @@
+services:
+  rp:
+    image: traefik:v3.1
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+  api:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+      ssh:
+        default:
+    image: aielts-api
+    container_name: aielts-api
+    restart: always
+    env_file:
+      - ../../.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`api.localhost`)
+      - traefik.http.routers.api.entrypoints=web
+    volumes:
+      - ../../api/config/db/pb_data:/root/pb_data
+      - ../../api/config/db/pb_public:/root/pb_public
+      - ../../api/config/db/pb_migrations:/root/pb_migrations
+
+  web:
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+      ssh:
+        default:
+    image: aielts-web
+    container_name: aielts-web
+    restart: always
+    env_file:
+      - ../../.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=HOST(`localhost`)
+      - traefik.http.routers.frontend.entrypoints=web
+
+  gen:
+    build:
+      context: ../../gen
+      dockerfile: Dockerfile
+    image: aielts-gen
+    container_name: aielts-gen
+    restart: always
+    env_file:
+      - ../../.env
+    ports:
+      - "8000:8000"

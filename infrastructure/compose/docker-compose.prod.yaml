@@ -1,0 +1,68 @@
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    command: --cleanup --interval 30
+    environment:
+      - WATCHTOWER_DEBUG=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+
+  reverse-proxy:
+    image: traefik:v3.1
+    command:
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.websecure.http.tls=true
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --certificatesresolvers.myresolver.acme.email=
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+  api:
+    # image: ghcr.io/aielts-rebirth/aielts/api-dev:latest
+    restart: always
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      # - traefik.http.routers.api.rule=Host(`api.`)
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls.certresolver=myresolver
+    volumes:
+      - ./pb_data:/root/pb_data
+
+  web:
+    # image: ghcr.io/aielts-rebirth/aielts/web-dev:latest
+    restart: always
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      # - traefik.http.routers.frontend.rule=Host(``)
+      - traefik.http.routers.frontend.entrypoints=websecure
+      - traefik.http.routers.frontend.tls.certresolver=myresolver
+
+  gen:
+    # image: ghcr.io/aielts-rebirth/aielts/gen-dev:latest
+    restart: always
+    env_file:
+      - .env
+    # environment:
+      # http_proxy: http://62.106.66.218:7777
+      # https_proxy: http://62.106.66.218:7777
+      # no_proxy: localhost,127.0.0.1,.example.com,api:8080
+
+volumes:
+  letsencrypt:

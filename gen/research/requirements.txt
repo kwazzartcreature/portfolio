@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+
+httpx>=0.24.1
+langchain_core==0.3.19
+langchain_openai==0.2.9
+langsmith==0.1.143
+
+openai==1.54.5
+pandas==2.2.3
+
+pydantic==2.7.4
+python-dotenv
